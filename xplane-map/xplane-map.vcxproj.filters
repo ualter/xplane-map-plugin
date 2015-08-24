@@ -35,5 +35,8 @@
     <ClInclude Include="SocketClient.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="XPListBoxWidget.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

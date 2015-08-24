@@ -24,6 +24,7 @@
 #include <vector>
 #include <windows.h>
 #include <GL/gl.h>
+#include "XPListBoxWidget.h"
 
 #pragma comment(lib, "OpenGL32.lib")
 
@@ -279,7 +280,10 @@ void CreateWidgetWindow()
 	lineX = 150;
 	XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 62, 1, "DataRefs:", 0, wMainWindow, xpWidgetClass_Caption);
 	lineY = 990;
-	wDataRefListBox = XPCreateListBox(lineX + 2, lineY - 40, lineX + 480, lineY - 240, 1, szListBoxText, wMainWindow);
+	//wDataRefListBox = XPCreateListBox(lineX + 2, lineY - 40, lineX + 480, lineY - 240, 1, szListBoxText, wMainWindow);
+
+	XPListBoxWidget xpListBox = XPListBoxWidget();
+	wDataRefListBox = xpListBox.XPCreateListBox(lineX + 2, lineY - 40, lineX + 480, lineY - 240, 1, szListBoxText, wMainWindow);
 	
 	// Buttons
 	lineY = 770;
