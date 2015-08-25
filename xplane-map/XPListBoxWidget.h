@@ -15,13 +15,14 @@
 #include <GL/gl.h>
 
 #pragma comment(lib, "OpenGL32.lib")
+#pragma once
 
 using namespace std;
 
 #define LISTBOX_ITEM_HEIGHT 12
 #define	xpWidgetClass_ListBox 10
 
-class XPListBoxWidget
+class XPListBoxWidget															 
 {
 public:
 	XPListBoxWidget();

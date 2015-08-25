@@ -24,7 +24,6 @@
 #include <vector>
 #include <windows.h>
 #include <GL/gl.h>
-#include "XPListBoxWidget.h"
 
 #pragma comment(lib, "OpenGL32.lib")
 
@@ -39,38 +38,26 @@
 #  define NULL ((void*)0)
 #endif
 
-#define CHECKINTERVAL 1.5 //seconds between checks	
+#define CHECKINTERVAL 1.5 //seconds between checks
 
-static int MenuItem1;
-static XPWidgetID wMainWindow, wSubWindow, wBtnReload, wBtnCancel, wBtnSendInfo;
-static XPWidgetID wTextServerAddress, wTextServerPort, wTextDataRefs, wDataRefListBox;
-static XPLMMenuID id;
-std::string logFile = "x-plane-map.log";
-static char szListBoxText[4096];
-
-float CallBackXPlane(float  inElapsedSinceLastCall,
-	float  inElapsedTimeSinceLastFlightLoop,
-	int    inCounter,
-	void * inRefcon);
-
-static int widgetWidgetHandler(
-	XPWidgetMessage			inMessage,
-	XPWidgetID				inWidget,
-	intptr_t				inParam1,
-	intptr_t				inParam2);
-
-// ListBox Implementation
+// ListBox Definitions
+#pragma region ListBox Definitions
 #define LISTBOX_ITEM_HEIGHT 12
-struct	XPListBoxData_t {
+#define	xpWidgetClass_ListBox 10
+char szListBoxText[4096];
+struct XPListBoxData_t {
 	// Per item:
 	std::vector<std::string>	Items;		// The name of the item
 	std::vector<int>			Lefts;		// The rectangle of the item, relative to the top left corner of the listbox/
 	std::vector<int>			Rights;
 };
-
 static XPListBoxData_t *pListBoxData;
 
-#define	xpWidgetClass_ListBox					10
+static int XPListBoxProc(
+	XPWidgetMessage			inMessage,
+	XPWidgetID				inWidget,
+	intptr_t				inParam1,
+	intptr_t				inParam2);
 
 enum {
 	// This is the item number of the current item, starting at 0.
@@ -100,7 +87,6 @@ enum {
 	// This stores the scrollbar ScrollBarPageAmount.
 	xpProperty_ListBoxScrollBarPageAmount = 1912
 };
-
 enum {
 	// This message is sent when an item is picked.
 	// param 1 is the widget that was picked, param 2
@@ -108,303 +94,6 @@ enum {
 	xpMessage_ListBoxItemSelected = 1900
 };
 
-static XPWidgetID           XPCreateListBox(
-	int                  inLeft,
-	int                  inTop,
-	int                  inRight,
-	int                  inBottom,
-	int                  inVisible,
-	const char *         inDescriptor,
-	XPWidgetID           inContainer);
-
-static int	XPListBoxProc(
-	XPWidgetMessage			inMessage,
-	XPWidgetID				inWidget,
-	intptr_t				inParam1,
-	intptr_t				inParam2);
-
-static void XPLaneMapMenuHandler(void *, void *);
-
-PLUGIN_API int XPluginStart(
-	char *		outName,
-	char *		outSig,
-	char *		outDesc)
-{
-	strcpy(outName, "XPlane-Map");
-	strcpy(outSig, "br.sp.ualter.junior.XPlaneMap");
-	strcpy(outDesc, "Plugin X-Plane");
-
-	int item;
-	item = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "XPlane Map", NULL, 1);
-	id = XPLMCreateMenu("XPlane Map", XPLMFindPluginsMenu(), item, XPLaneMapMenuHandler, NULL);
-	XPLMAppendMenuItem(id, "Setup", (void *)"Setup", 1);
-
-	// Preload Listbox
-	szListBoxText[0] = '\0';
-	strcat(szListBoxText, "1234567890123456789012345678901234567890123456789012345678901234567890");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 2");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 3");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 4");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 5");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 6");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 7");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 8");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 9");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 10");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 11");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 12");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 13");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 14");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 15");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 16");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 17");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 18");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 19");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 20");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 21");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 22");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 23");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 24");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 25");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 26");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 27");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 28");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 29");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 30");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 31");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 32");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 33");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 34");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 35");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 36");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 37");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 38");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 39");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 40");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 41");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 42");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 43");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 44");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 45");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 46");
-	strcat(szListBoxText, ";");
-
-	MenuItem1 = 0;
-
-
-	return 1;
-}
-
-void CreateWidgetWindow() 
-{
-	int x = 100;
-	int y = 1050;
-	int w = 820;
-	int h = 455;
-
-	int x2 = x + w;
-	int y2 = y - h;
-
-	wMainWindow = XPCreateWidget(x, y, x2, y2, 1, "XPlane Map / v1.0", 1, NULL, xpWidgetClass_MainWindow);
-	XPSetWidgetProperty(wMainWindow, xpProperty_MainWindowHasCloseBoxes, 1);
-
-	// Window
-	wSubWindow = XPCreateWidget(x + 30, y - 40, x2 - 30, y2 + 30, 1, "", 0, wMainWindow, xpWidgetClass_SubWindow);
-	XPSetWidgetProperty(wSubWindow, xpProperty_SubWindowType, xpSubWindowStyle_SubWindow);
-
-	int lineY = 1030;
-	int lineX = 150;
-	int size = 80;
-
-	// Server Address
-	XPCreateWidget(lineX, lineY - 39, lineX + size, lineY - 59, 1, "Server Address:", 0, wMainWindow, xpWidgetClass_Caption);
-	lineX += 88;
-	wTextServerAddress = XPCreateWidget(lineX, lineY - 40, lineX + 100, lineY - 60, 1, "192.168.0.179", 0, wMainWindow, xpWidgetClass_TextField);
-	XPSetWidgetProperty(wTextServerAddress, xpProperty_TextFieldType, xpTextEntryField);
-	XPSetWidgetProperty(wTextServerAddress, xpProperty_MaxCharacters, 15);
-	// Port
-	lineX += 130;
-	XPCreateWidget(lineX, lineY - 39, lineX + size, lineY - 59, 1, "Port:", 0, wMainWindow, xpWidgetClass_Caption);
-	lineX += 32;
-	wTextServerPort = XPCreateWidget(lineX, lineY - 40, lineX + 50, lineY - 60, 1, "5583", 0, wMainWindow, xpWidgetClass_TextField);
-	XPSetWidgetProperty(wTextServerPort, xpProperty_TextFieldType, xpTextEntryField);
-	XPSetWidgetProperty(wTextServerPort, xpProperty_MaxCharacters, 8);
-
-	// DataRefs
-	lineY = 1010;
-	lineX = 150;
-	XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 62, 1, "DataRefs:", 0, wMainWindow, xpWidgetClass_Caption);
-	lineY = 990;
-	//wDataRefListBox = XPCreateListBox(lineX + 2, lineY - 40, lineX + 480, lineY - 240, 1, szListBoxText, wMainWindow);
-
-	XPListBoxWidget xpListBox = XPListBoxWidget();
-	wDataRefListBox = xpListBox.XPCreateListBox(lineX + 2, lineY - 40, lineX + 480, lineY - 240, 1, szListBoxText, wMainWindow);
-	
-	// Buttons
-	lineY = 770;
-	lineX = 230;
-	// Button Exit
-	wBtnCancel = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Exit", 0, wMainWindow, xpWidgetClass_Button);
-	XPSetWidgetProperty(wBtnCancel, xpProperty_ButtonType, xpPushButton);
-
-	// Button Send
-	lineX += 100;
-	wBtnSendInfo = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Send", 0, wMainWindow, xpWidgetClass_Button);
-	XPSetWidgetProperty(wBtnSendInfo, xpProperty_ButtonType, xpPushButton);
-
-	// Button Reload
-	lineX += 100;
-	wBtnReload = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Reload", 0, wMainWindow, xpWidgetClass_Button);
-	XPSetWidgetProperty(wBtnReload, xpProperty_ButtonType, xpPushButton); 
-
-	XPAddWidgetCallback(wMainWindow, widgetWidgetHandler);
-}
-
-static XPWidgetID           XPCreateListBox(
-	int                  inLeft,
-	int                  inTop,
-	int                  inRight,
-	int                  inBottom,
-	int                  inVisible,
-	const char *         inDescriptor,
-	XPWidgetID           inContainer)
-{
-	return XPCreateCustomWidget(
-		inLeft,
-		inTop,
-		inRight,
-		inBottom,
-		inVisible,
-		inDescriptor,
-		0,
-		inContainer,
-		XPListBoxProc);
-}
-
-
-void sendInfo() 
-{
-	std::ifstream fin(logFile);
-	std::ofstream fileIniWriter;
-	fileIniWriter.open(logFile);
-	fileIniWriter << "Aqui\n";
-
-	SocketClient so = SocketClient("192.168.0.179");
-	so.sendTo("Hello from X-Plane 11");
-	so.sendTo("Hello from X-Plane 22");
-	so.~SocketClient();
-
-	fileIniWriter << "\nOK!\n";
-	fileIniWriter.close();
-}
-
-void XPLaneMapMenuHandler(void * mRef, void * iRef)
-{
-	if (!strcmp((char *)iRef, "Setup"))
-	{
-		if (MenuItem1 == 0)
-		{
-			CreateWidgetWindow();
-			MenuItem1 = 1;
-			XPLMRegisterFlightLoopCallback(CallBackXPlane, 1.0, NULL);
-		}
-	}
-}
-
-float CallBackXPlane(float  inElapsedSinceLastCall,
-	float  inElapsedTimeSinceLastFlightLoop,
-	int    inCounter,
-	void * inRefcon)
-{
-	return CHECKINTERVAL;
-}
-
-int widgetWidgetHandler(XPWidgetMessage inMessage,
-	XPWidgetID				inWidget,
-	intptr_t				inParam1,
-	intptr_t				inParam2)
-{
-
-	if (inMessage == xpMessage_CloseButtonPushed)
-	{
-		if (MenuItem1 == 1)
-		{
-			XPHideWidget(wMainWindow);
-			MenuItem1 = 0;
-		}
-		return 1;
-	}
-
-	if (inMessage == xpMsg_PushButtonPressed)
-	{
-		if (inParam1 == (intptr_t)wBtnReload)
-		{
-			XPLMReloadPlugins();
-			return 1;
-		}
-		if (inParam1 == (intptr_t)wBtnSendInfo)
-		{
-			sendInfo();
-			return 1;
-		}
-		if (inParam1 == (intptr_t)wBtnCancel)
-		{
-			XPHideWidget(wMainWindow);
-			MenuItem1 = 0;
-			return 1;
-		}
-	}
-	return 0;
-}
-
-// ListBox Methods
-
-// Enums for x-plane native colors. 
 enum {
 
 	xpColor_MenuDarkTinge = 0,
@@ -454,8 +143,152 @@ static XPLMDataRef	gColorRefs[xpColor_Count];
 
 // Current alpha levels to blit at.
 static float		gAlphaLevel = 1.0;
+static XPWidgetID           XPCreateListBox(
+	int                  inLeft,
+	int                  inTop,
+	int                  inRight,
+	int                  inBottom,
+	int                  inVisible,
+	const char *         inDescriptor,
+	XPWidgetID           inContainer);
 
+static int		XPListBoxProc(
+	XPWidgetMessage			inMessage,
+	XPWidgetID				inWidget,
+	intptr_t				inParam1,
+	intptr_t				inParam2);
+#pragma endregion ListBox Definitions
+// End ListBox definitions
 
+static int MenuItem1;
+static XPWidgetID wMainWindow, wSubWindow, wBtnReload, wBtnCancel, wBtnSendInfo;
+static XPWidgetID wTextServerAddress, wTextServerPort, wTextDataRefs, wDataRefListBox;
+static XPWidgetID wTextDataRefItem, wBtnAddDataRef, wBtnRemoteDataRef;
+static XPLMMenuID id;
+std::string logFile = "x-plane-map.log";
+
+float CallBackXPlane(float  inElapsedSinceLastCall,
+	float  inElapsedTimeSinceLastFlightLoop,
+	int    inCounter,
+	void * inRefcon);
+
+static int widgetWidgetHandler(
+	XPWidgetMessage			inMessage,
+	XPWidgetID				inWidget,
+	intptr_t				inParam1,
+	intptr_t				inParam2);
+
+static void XPLaneMapMenuHandler(void *, void *);
+
+PLUGIN_API int XPluginStart(
+	char *		outName,
+	char *		outSig,
+	char *		outDesc)
+{
+	strcpy(outName, "XPlane-Map");
+	strcpy(outSig, "br.sp.ualter.junior.XPlaneMap");
+	strcpy(outDesc, "Plugin X-Plane");
+
+	int item;
+	item = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "XPlane Map", NULL, 1);
+	id = XPLMCreateMenu("XPlane Map", XPLMFindPluginsMenu(), item, XPLaneMapMenuHandler, NULL);
+	XPLMAppendMenuItem(id, "Setup", (void *)"Setup", 1);
+
+	// Preload Listbox
+	szListBoxText[0] = '\0';
+	strcat(szListBoxText, "Item 1");
+	strcat(szListBoxText, ";");
+	strcat(szListBoxText, "Item 2");
+	strcat(szListBoxText, ";");
+	strcat(szListBoxText, "Item 3");
+	strcat(szListBoxText, ";");
+	strcat(szListBoxText, "Item 4");
+	strcat(szListBoxText, ";");
+	strcat(szListBoxText, "Item 5");
+	strcat(szListBoxText, ";");
+	MenuItem1 = 0;
+
+	return 1;
+}
+
+void CreateWidgetWindow() 
+{
+	int x = 100;
+	int y = 1050;
+	int w = 820;
+	int h = 455;
+
+	int x2 = x + w;
+	int y2 = y - h;
+
+	wMainWindow = XPCreateWidget(x, y, x2, y2, 1, "XPlane Map / v1.0", 1, NULL, xpWidgetClass_MainWindow);
+	XPSetWidgetProperty(wMainWindow, xpProperty_MainWindowHasCloseBoxes, 1);
+
+	// Window
+	wSubWindow = XPCreateWidget(x + 30, y - 40, x2 - 30, y2 + 30, 1, "", 0, wMainWindow, xpWidgetClass_SubWindow);
+	XPSetWidgetProperty(wSubWindow, xpProperty_SubWindowType, xpSubWindowStyle_SubWindow);
+
+	int lineY = 1030;
+	int lineX = 150;
+	int size = 100;
+
+	// Server Address
+	XPCreateWidget(lineX, lineY - 39, lineX + size, lineY - 59, 1, "Server Address:", 0, wMainWindow, xpWidgetClass_Caption);
+	lineX += 88;
+	wTextServerAddress = XPCreateWidget(lineX, lineY - 40, lineX + 100, lineY - 60, 1, "192.168.0.179", 0, wMainWindow, xpWidgetClass_TextField);
+	XPSetWidgetProperty(wTextServerAddress, xpProperty_TextFieldType, xpTextEntryField);
+	XPSetWidgetProperty(wTextServerAddress, xpProperty_MaxCharacters, 15);
+	// Port
+	lineX += 130;
+	XPCreateWidget(lineX, lineY - 39, lineX + size, lineY - 59, 1, "Port:", 0, wMainWindow, xpWidgetClass_Caption);
+	lineX += 32;
+	wTextServerPort = XPCreateWidget(lineX, lineY - 40, lineX + 50, lineY - 60, 1, "5583", 0, wMainWindow, xpWidgetClass_TextField);
+	XPSetWidgetProperty(wTextServerPort, xpProperty_TextFieldType, xpTextEntryField);
+	XPSetWidgetProperty(wTextServerPort, xpProperty_MaxCharacters, 8);
+
+	// DataRefs
+	lineY = 1010;
+	lineX = 150;
+	XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 62, 1, "DataRefs:", 0, wMainWindow, xpWidgetClass_Caption);
+	lineY = 995;
+	wTextDataRefItem = XPCreateWidget(lineX + 2, lineY - 40, lineX + 368, lineY - 60, 1, "sim/com/dtaref", 0, wMainWindow, xpWidgetClass_TextField);
+	XPSetWidgetProperty(wTextDataRefItem, xpProperty_TextFieldType, xpTextEntryField);
+	XPSetWidgetProperty(wTextDataRefItem, xpProperty_MaxCharacters, 100);
+	lineX =+ 525;
+	wBtnAddDataRef = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Add DataRef", 0, wMainWindow, xpWidgetClass_Button);
+	XPSetWidgetProperty(wBtnAddDataRef, xpProperty_ButtonType, xpPushButton);
+	lineY = 972;
+	lineX = 150;
+	wDataRefListBox = XPCreateListBox(lineX + 2, lineY - 40, lineX + 480, lineY - 240, 1, szListBoxText, wMainWindow);
+	
+	// Buttons
+	lineY = 760;
+	lineX = 200;
+	// Button Exit
+	wBtnCancel = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Exit", 0, wMainWindow, xpWidgetClass_Button);
+	XPSetWidgetProperty(wBtnCancel, xpProperty_ButtonType, xpPushButton);
+
+	// Button Remote DataRef
+	lineX += 120;
+	wBtnRemoteDataRef = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Remove DataRef", 0, wMainWindow, xpWidgetClass_Button);
+	XPSetWidgetProperty(wBtnRemoteDataRef, xpProperty_ButtonType, xpPushButton);
+
+	// Button Send
+	lineX += 120;
+	wBtnSendInfo = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Send Now", 0, wMainWindow, xpWidgetClass_Button);
+	XPSetWidgetProperty(wBtnSendInfo, xpProperty_ButtonType, xpPushButton);
+
+	// Button Reload
+	lineY = 735;
+	lineX = 300;
+	wBtnReload = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Reload", 0, wMainWindow, xpWidgetClass_Button);
+	XPSetWidgetProperty(wBtnReload, xpProperty_ButtonType, xpPushButton); 
+
+	XPAddWidgetCallback(wMainWindow, widgetWidgetHandler);
+}
+
+// ListBox Methods
+#pragma region ListBox Methods
 // Just remember alpha levels for later.
 // This routine sets up a color from the above table.  Pass
 // in a float[3] to get the color; pass in NULL to have the
@@ -505,6 +338,7 @@ static void	SetAlphaLevels(float inAlphaLevel)
 {
 	gAlphaLevel = inAlphaLevel;
 }
+
 static void XPListBoxAddItem(XPListBoxData_t *pListBoxData, char *pBuffer, int Width)
 {
 	std::string	Item(pBuffer);
@@ -521,8 +355,6 @@ static void XPListBoxClear(XPListBoxData_t *pListBoxData)
 	pListBoxData->Rights.clear();
 }
 
-// This routine finds the item that is in a given point, or returns -1 if there is none.
-// It simply trolls through all the items.
 static void XPListBoxFillWithData(XPListBoxData_t *pListBoxData, const char *inItems, int Width)
 {
 	std::string	Items(inItems);
@@ -574,7 +406,8 @@ static void XPListBoxDeleteItem(XPListBoxData_t *pListBoxData, int CurrentItem)
 	pListBoxData->Lefts.erase(pListBoxData->Lefts.begin() + CurrentItem);
 	pListBoxData->Rights.erase(pListBoxData->Rights.begin() + CurrentItem);
 }
-static int		XPListBoxProc(
+
+static int	XPListBoxProc(
 	XPWidgetMessage			inMessage,
 	XPWidgetID				inWidget,
 	intptr_t				inParam1,
@@ -635,6 +468,7 @@ static int		XPListBoxProc(
 			XPSetWidgetProperty(inWidget, xpProperty_ListBoxAddItem, 0);
 			XPGetWidgetDescriptor(inWidget, Buffer, sizeof(Buffer));
 			XPListBoxAddItem(pListBoxData, Buffer, (Right - Left - 20));
+			//XPListBoxWidget::XPListBoxAddItem(Buffer, (Right - Left - 20));
 			Max = pListBoxData->Items.size();
 			SliderPosition = Max;
 			XPSetWidgetProperty(inWidget, xpProperty_ListBoxScrollBarSliderPosition, SliderPosition);
@@ -888,4 +722,111 @@ static int		XPListBoxProc(
 	}
 }
 
+XPWidgetID  XPCreateListBox(
+	int                  inLeft,
+	int                  inTop,
+	int                  inRight,
+	int                  inBottom,
+	int                  inVisible,
+	const char *         inDescriptor,
+	XPWidgetID           inContainer)
+{
+	return XPCreateCustomWidget(
+		inLeft,
+		inTop,
+		inRight,
+		inBottom,
+		inVisible,
+		inDescriptor,
+		0,
+		inContainer,
+		XPListBoxProc);
+}
+#pragma endregion ListBox Methods
+// End ListBox Methods
 
+// Methods XPlane Map
+void sendInfo()
+{
+	std::ifstream fin(logFile);
+	std::ofstream fileIniWriter;
+	fileIniWriter.open(logFile);
+	fileIniWriter << "Aqui\n";
+
+	SocketClient so = SocketClient("192.168.0.179");
+	so.sendTo("Hello from X-Plane 11");
+	so.sendTo("Hello from X-Plane 22");
+	so.~SocketClient();
+
+	fileIniWriter << "\nOK!\n";
+	fileIniWriter.close();
+}
+
+void XPLaneMapMenuHandler(void * mRef, void * iRef)
+{
+	if (!strcmp((char *)iRef, "Setup"))
+	{
+		if (MenuItem1 == 0)
+		{
+			CreateWidgetWindow();
+			MenuItem1 = 1;
+			XPLMRegisterFlightLoopCallback(CallBackXPlane, 1.0, NULL);
+		}
+	}
+}
+
+float CallBackXPlane(float  inElapsedSinceLastCall,
+	float  inElapsedTimeSinceLastFlightLoop,
+	int    inCounter,
+	void * inRefcon)
+{
+	return CHECKINTERVAL;
+}
+
+int widgetWidgetHandler(XPWidgetMessage inMessage,
+	XPWidgetID				inWidget,
+	intptr_t				inParam1,
+	intptr_t				inParam2)
+{
+
+	if (inMessage == xpMessage_CloseButtonPushed)
+	{
+		if (MenuItem1 == 1)
+		{
+			XPHideWidget(wMainWindow);
+			MenuItem1 = 0;
+		}
+		return 1;
+	}
+
+	if (inMessage == xpMsg_PushButtonPressed)
+	{
+		if (inParam1 == (intptr_t)wBtnReload)
+		{
+			XPLMReloadPlugins();
+			return 1;
+		}
+		if (inParam1 == (intptr_t)wBtnSendInfo)
+		{
+			sendInfo();
+			return 1;
+		}
+		if (inParam1 == (intptr_t)wBtnCancel)
+		{
+			XPHideWidget(wMainWindow);
+			MenuItem1 = 0;
+			return 1;
+		}
+		if (inParam1 == (intptr_t)wBtnAddDataRef)
+		{
+			// Insert Item
+			char Buffer[4096];
+			XPGetWidgetDescriptor(wTextDataRefItem, Buffer, sizeof(Buffer));
+			XPSetWidgetDescriptor(wDataRefListBox, Buffer);
+			XPSetWidgetProperty(wDataRefListBox, xpProperty_ListBoxInsertItem, 1);
+			return 1;
+		}
+
+	}
+	return 0;
+}

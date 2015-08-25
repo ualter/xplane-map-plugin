@@ -167,11 +167,9 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="xplane-map.cpp" />
-    <ClCompile Include="XPListBoxWidget.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SocketClient.h" />
-    <ClInclude Include="XPListBoxWidget.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
