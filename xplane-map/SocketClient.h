@@ -11,7 +11,7 @@ class SocketClient
 {
 public:
 	int sendTo(char *message);
-	SocketClient(char *serverAddress);
+	SocketClient(const char *serverAddress, int port);
 	~SocketClient();
 
 private:

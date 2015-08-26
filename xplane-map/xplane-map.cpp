@@ -25,6 +25,7 @@
 #include <windows.h>
 #include <GL/gl.h>
 
+
 #pragma comment(lib, "OpenGL32.lib")
 
 
@@ -39,12 +40,17 @@
 #endif
 
 #define CHECKINTERVAL 1.5 //seconds between checks
+std::string fileName = "xplane-map.cfg";
+std::string logFile = "x-plane-map.log";
+std::string server;
+std::string port;
+char szListBoxText[4096];
 
 // ListBox Definitions
 #pragma region ListBox Definitions
 #define LISTBOX_ITEM_HEIGHT 12
 #define	xpWidgetClass_ListBox 10
-char szListBoxText[4096];
+
 struct XPListBoxData_t {
 	// Per item:
 	std::vector<std::string>	Items;		// The name of the item
@@ -165,7 +171,7 @@ static XPWidgetID wMainWindow, wSubWindow, wBtnReload, wBtnCancel, wBtnSendInfo;
 static XPWidgetID wTextServerAddress, wTextServerPort, wTextDataRefs, wDataRefListBox;
 static XPWidgetID wTextDataRefItem, wBtnAddDataRef, wBtnRemoteDataRef;
 static XPLMMenuID id;
-std::string logFile = "x-plane-map.log";
+
 
 float CallBackXPlane(float  inElapsedSinceLastCall,
 	float  inElapsedTimeSinceLastFlightLoop,
@@ -179,6 +185,8 @@ static int widgetWidgetHandler(
 	intptr_t				inParam2);
 
 static void XPLaneMapMenuHandler(void *, void *);
+void checkFileConfig();
+void saveFileCfg();
 
 PLUGIN_API int XPluginStart(
 	char *		outName,
@@ -193,6 +201,8 @@ PLUGIN_API int XPluginStart(
 	item = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "XPlane Map", NULL, 1);
 	id = XPLMCreateMenu("XPlane Map", XPLMFindPluginsMenu(), item, XPLaneMapMenuHandler, NULL);
 	XPLMAppendMenuItem(id, "Setup", (void *)"Setup", 1);
+
+	checkFileConfig();
 
 	// Preload Listbox
 	szListBoxText[0] = '\0';
@@ -215,7 +225,7 @@ void CreateWidgetWindow()
 {
 	int x = 100;
 	int y = 1050;
-	int w = 820;
+	int w = 800;
 	int h = 455;
 
 	int x2 = x + w;
@@ -235,14 +245,14 @@ void CreateWidgetWindow()
 	// Server Address
 	XPCreateWidget(lineX, lineY - 39, lineX + size, lineY - 59, 1, "Server Address:", 0, wMainWindow, xpWidgetClass_Caption);
 	lineX += 88;
-	wTextServerAddress = XPCreateWidget(lineX, lineY - 40, lineX + 100, lineY - 60, 1, "192.168.0.179", 0, wMainWindow, xpWidgetClass_TextField);
+	wTextServerAddress = XPCreateWidget(lineX, lineY - 40, lineX + 100, lineY - 60, 1, server.c_str(), 0, wMainWindow, xpWidgetClass_TextField);
 	XPSetWidgetProperty(wTextServerAddress, xpProperty_TextFieldType, xpTextEntryField);
 	XPSetWidgetProperty(wTextServerAddress, xpProperty_MaxCharacters, 15);
 	// Port
 	lineX += 130;
 	XPCreateWidget(lineX, lineY - 39, lineX + size, lineY - 59, 1, "Port:", 0, wMainWindow, xpWidgetClass_Caption);
 	lineX += 32;
-	wTextServerPort = XPCreateWidget(lineX, lineY - 40, lineX + 50, lineY - 60, 1, "5583", 0, wMainWindow, xpWidgetClass_TextField);
+	wTextServerPort = XPCreateWidget(lineX, lineY - 40, lineX + 50, lineY - 60, 1, port.c_str(), 0, wMainWindow, xpWidgetClass_TextField);
 	XPSetWidgetProperty(wTextServerPort, xpProperty_TextFieldType, xpTextEntryField);
 	XPSetWidgetProperty(wTextServerPort, xpProperty_MaxCharacters, 8);
 
@@ -745,21 +755,28 @@ XPWidgetID  XPCreateListBox(
 #pragma endregion ListBox Methods
 // End ListBox Methods
 
+long convertToNumber(std::string str)
+{
+	long result;
+	std::stringstream convert(str);
+	convert >> result;
+	return result;
+}
+void log(std::string msg) {
+	time_t now = time(0);
+	std::ofstream log(logFile, std::ios_base::app | std::ios_base::out);
+	log << now << "-" << msg << "\n";
+	log.close();
+}
+
 // Methods XPlane Map
 void sendInfo()
 {
-	std::ifstream fin(logFile);
-	std::ofstream fileIniWriter;
-	fileIniWriter.open(logFile);
-	fileIniWriter << "Aqui\n";
-
-	SocketClient so = SocketClient("192.168.0.179");
+	log("Opening Socket with " + server + ":" + port);
+	SocketClient so = SocketClient(server.c_str(), convertToNumber(port));
 	so.sendTo("Hello from X-Plane 11");
 	so.sendTo("Hello from X-Plane 22");
 	so.~SocketClient();
-
-	fileIniWriter << "\nOK!\n";
-	fileIniWriter.close();
 }
 
 void XPLaneMapMenuHandler(void * mRef, void * iRef)
@@ -813,6 +830,7 @@ int widgetWidgetHandler(XPWidgetMessage inMessage,
 		}
 		if (inParam1 == (intptr_t)wBtnCancel)
 		{
+			saveFileCfg();
 			XPHideWidget(wMainWindow);
 			MenuItem1 = 0;
 			return 1;
@@ -826,7 +844,81 @@ int widgetWidgetHandler(XPWidgetMessage inMessage,
 			XPSetWidgetProperty(wDataRefListBox, xpProperty_ListBoxInsertItem, 1);
 			return 1;
 		}
+		if (inParam1 == (intptr_t)wBtnRemoteDataRef)
+		{
+			// Remove Item
+			XPSetWidgetProperty(wDataRefListBox, xpProperty_ListBoxDeleteItem, 1);
+			return 1;
+		}
+		
+
 
 	}
 	return 0;
+}
+
+void checkFileConfig() {
+	std::ifstream fileIniReader(fileName.c_str());
+	if (fileIniReader.good()) {
+		szListBoxText[0] = '\0';
+
+		std::string line;
+		while (std::getline(fileIniReader, line)) {
+			std::string param = "";
+			std::string value = "";
+
+			param = line.substr(0, line.find("="));
+			value = line.substr(line.find("=") + 1);
+
+			if (strcmp(param.c_str(), "server") == 0)  {
+				server = value.c_str();
+			}
+			else
+			if (strcmp(param.c_str(), "port") == 0)  {
+				port = value.c_str();
+			}
+			else
+			if (strcmp(param.c_str(), "dataref") == 0)  {
+				strcat(szListBoxText, value.c_str());
+				strcat(szListBoxText, ";");
+			}
+		}
+		fileIniReader.close();
+	} else {
+		fileIniReader.close();
+		std::ofstream fileIniWriter;
+		fileIniWriter.open(fileName.c_str());
+		fileIniWriter << "server=192.168.0.179\n";
+		fileIniWriter << "port=5583\n";
+		fileIniWriter.close();
+	}
+}
+
+void saveFileCfg()
+{
+	char buffer[256];
+	XPGetWidgetDescriptor(wTextServerAddress, buffer, sizeof(buffer));
+	server = buffer;
+	XPGetWidgetDescriptor(wTextServerPort, buffer, sizeof(buffer));
+	port = buffer;
+
+	std::ifstream fin(fileName);
+	if (fin) {
+		fin.close();
+		std::remove(fileName.c_str());
+	}
+	std::ofstream fileIniWriter;
+	fileIniWriter.open(fileName);
+	fileIniWriter << "server=" + server + "\n";
+	fileIniWriter << "port=" + port + "\n";
+
+	char temp[4096];
+	strncpy(temp, szListBoxText, sizeof(temp));
+	char* itens = strtok(temp, ";");
+	while (itens) {
+		fileIniWriter << "dataref=" << itens << "\n";
+		itens = strtok(NULL, ";");
+	}
+
+	fileIniWriter.close();
 }
