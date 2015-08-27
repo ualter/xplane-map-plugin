@@ -167,9 +167,10 @@ static int		XPListBoxProc(
 // End ListBox definitions
 
 static int MenuItem1;
-static XPWidgetID wMainWindow, wSubWindow, wBtnReload, wBtnCancel, wBtnSendInfo;
+static XPWidgetID wMainWindow, wSubWindow, wBtnReload, wBtnSaveExit, wBtnSendInfo;
 static XPWidgetID wTextServerAddress, wTextServerPort, wTextDataRefs, wDataRefListBox;
-static XPWidgetID wTextDataRefItem, wBtnAddDataRef, wBtnRemoteDataRef;
+static XPWidgetID wTextDataRefItem, wBtnAddDataRef, wBtnRemoteDataRef, wBtnExit;
+static XPWidgetID wChkSendOn;
 static XPLMMenuID id;
 
 
@@ -184,9 +185,13 @@ static int widgetWidgetHandler(
 	intptr_t				inParam1,
 	intptr_t				inParam2);
 
+std::string getDescriptionGPSDestinationType(int destinationType);
+
 static void XPLaneMapMenuHandler(void *, void *);
 void checkFileConfig();
 void saveFileCfg();
+void sendDataRefs();
+int sendOn = 0;
 
 PLUGIN_API int XPluginStart(
 	char *		outName,
@@ -203,21 +208,7 @@ PLUGIN_API int XPluginStart(
 	XPLMAppendMenuItem(id, "Setup", (void *)"Setup", 1);
 
 	checkFileConfig();
-
-	// Preload Listbox
-	szListBoxText[0] = '\0';
-	strcat(szListBoxText, "Item 1");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 2");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 3");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 4");
-	strcat(szListBoxText, ";");
-	strcat(szListBoxText, "Item 5");
-	strcat(szListBoxText, ";");
 	MenuItem1 = 0;
-
 	return 1;
 }
 
@@ -225,8 +216,8 @@ void CreateWidgetWindow()
 {
 	int x = 100;
 	int y = 1050;
-	int w = 800;
-	int h = 455;
+	int w = 577;
+	int h = 390;
 
 	int x2 = x + w;
 	int y2 = y - h;
@@ -240,7 +231,7 @@ void CreateWidgetWindow()
 
 	int lineY = 1030;
 	int lineX = 150;
-	int size = 100;
+	int size = 80;
 
 	// Server Address
 	XPCreateWidget(lineX, lineY - 39, lineX + size, lineY - 59, 1, "Server Address:", 0, wMainWindow, xpWidgetClass_Caption);
@@ -255,13 +246,21 @@ void CreateWidgetWindow()
 	wTextServerPort = XPCreateWidget(lineX, lineY - 40, lineX + 50, lineY - 60, 1, port.c_str(), 0, wMainWindow, xpWidgetClass_TextField);
 	XPSetWidgetProperty(wTextServerPort, xpProperty_TextFieldType, xpTextEntryField);
 	XPSetWidgetProperty(wTextServerPort, xpProperty_MaxCharacters, 8);
+	// Send On
+	lineX += 80;
+	wChkSendOn = XPCreateWidget(lineX, lineY - 40, lineX + 50, lineY - 60, 1, "", 0, wMainWindow, xpWidgetClass_Button);
+	XPSetWidgetProperty(wChkSendOn, xpProperty_ButtonType, xpRadioButton);
+	XPSetWidgetProperty(wChkSendOn, xpProperty_ButtonBehavior, xpButtonBehaviorCheckBox);
+	XPSetWidgetProperty(wChkSendOn, xpProperty_ButtonState, sendOn);
+	lineX += 40;
+	XPCreateWidget(lineX, lineY - 39, lineX + size, lineY - 59, 1, "Send DataRef", 0, wMainWindow, xpWidgetClass_Caption);
 
 	// DataRefs
 	lineY = 1010;
 	lineX = 150;
 	XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 62, 1, "DataRefs:", 0, wMainWindow, xpWidgetClass_Caption);
 	lineY = 995;
-	wTextDataRefItem = XPCreateWidget(lineX + 2, lineY - 40, lineX + 368, lineY - 60, 1, "sim/com/dtaref", 0, wMainWindow, xpWidgetClass_TextField);
+	wTextDataRefItem = XPCreateWidget(lineX + 2, lineY - 40, lineX + 368, lineY - 60, 1, "", 0, wMainWindow, xpWidgetClass_TextField);
 	XPSetWidgetProperty(wTextDataRefItem, xpProperty_TextFieldType, xpTextEntryField);
 	XPSetWidgetProperty(wTextDataRefItem, xpProperty_MaxCharacters, 100);
 	lineX =+ 525;
@@ -273,24 +272,30 @@ void CreateWidgetWindow()
 	
 	// Buttons
 	lineY = 760;
-	lineX = 200;
-	// Button Exit
-	wBtnCancel = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Exit", 0, wMainWindow, xpWidgetClass_Button);
-	XPSetWidgetProperty(wBtnCancel, xpProperty_ButtonType, xpPushButton);
-
-	// Button Remote DataRef
-	lineX += 120;
-	wBtnRemoteDataRef = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Remove DataRef", 0, wMainWindow, xpWidgetClass_Button);
-	XPSetWidgetProperty(wBtnRemoteDataRef, xpProperty_ButtonType, xpPushButton);
+	lineX = 180;
 
 	// Button Send
-	lineX += 120;
 	wBtnSendInfo = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Send Now", 0, wMainWindow, xpWidgetClass_Button);
 	XPSetWidgetProperty(wBtnSendInfo, xpProperty_ButtonType, xpPushButton);
 
+	// Button Remote DataRef
+	lineX += 110;
+	wBtnRemoteDataRef = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Del DataRef", 0, wMainWindow, xpWidgetClass_Button);
+	XPSetWidgetProperty(wBtnRemoteDataRef, xpProperty_ButtonType, xpPushButton);
+
+	// Button Exit
+	lineX += 110;
+	wBtnSaveExit = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Save & Exit", 0, wMainWindow, xpWidgetClass_Button);
+	XPSetWidgetProperty(wBtnSaveExit, xpProperty_ButtonType, xpPushButton);
+
+	// Button Exit
+	lineX += 110;
+	wBtnExit = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Exit", 0, wMainWindow, xpWidgetClass_Button);
+	XPSetWidgetProperty(wBtnExit, xpProperty_ButtonType, xpPushButton);
+
 	// Button Reload
-	lineY = 735;
-	lineX = 300;
+	lineY = 730;
+	lineX = 330;
 	wBtnReload = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Reload", 0, wMainWindow, xpWidgetClass_Button);
 	XPSetWidgetProperty(wBtnReload, xpProperty_ButtonType, xpPushButton); 
 
@@ -755,6 +760,18 @@ XPWidgetID  XPCreateListBox(
 #pragma endregion ListBox Methods
 // End ListBox Methods
 
+std::string convertToString(long number)
+{
+	/*char * buf = 0;
+	buf = (char*)malloc(_CVTBUFSIZE);
+	int err;
+	err = _gcvt_s(buf, _CVTBUFSIZE, number, units);
+	return buf;*/
+	std::ostringstream ostr;
+	ostr << std::fixed << std::setprecision(0) << number;
+	std::string str = ostr.str();
+	return str;
+}
 long convertToNumber(std::string str)
 {
 	long result;
@@ -770,12 +787,72 @@ void log(std::string msg) {
 }
 
 // Methods XPlane Map
-void sendInfo()
+float CallBackXPlane(float  inElapsedSinceLastCall,
+	float  inElapsedTimeSinceLastFlightLoop,
+	int    inCounter,
+	void * inRefcon)
 {
+	if (sendOn) {
+		sendDataRefs();
+	}
+	return CHECKINTERVAL;
+}
+static void sendDataRefs(XPListBoxData_t *pListBoxData, SocketClient &socket)
+{
+	for (unsigned int n = 0; n < pListBoxData->Items.size(); ++n)
+	{
+		std::string dataref = pListBoxData->Items[n];
+		log("sending..." + dataref);
+		socket.sendTo(dataref.c_str());
+	}
+}
+void sendDataRefs()
+{
+	char label[256];
 	log("Opening Socket with " + server + ":" + port);
 	SocketClient so = SocketClient(server.c_str(), convertToNumber(port));
-	so.sendTo("Hello from X-Plane 11");
-	so.sendTo("Hello from X-Plane 22");
+
+	// Send Datarefs expected by the XPlane Map
+	// GPS Infos
+	XPLMNavRef gpsDestination = XPLMGetGPSDestination();
+	XPLMNavType gpsDestinationType = XPLMGetGPSDestinationType();
+	std::ostringstream stringStream;
+	int outFrequency;
+	char outID[10];
+	char outName[256];
+	XPLMGetNavAidInfo(gpsDestination, &gpsDestinationType, NULL, NULL, NULL, &outFrequency, NULL, outID, outName, NULL);
+	if (strcmp(outID, "----") != 0)  {
+		std::string descripDestTypeGPS = getDescriptionGPSDestinationType(gpsDestinationType);
+		stringStream << "GpsDestination=" << descripDestTypeGPS << "-" << outName << "-" << outID;
+		so.sendTo(stringStream.str().c_str());
+	} else {
+		so.sendTo("GpsDestination=FMS");
+	}
+	stringStream.str("");
+
+	// Nav1 Frequency
+	float nav1FreqHz = XPLMGetDatai(XPLMFindDataRef("sim/cockpit/radios/nav1_freq_hz"));
+	stringStream << "Nav1FreqHz=" << nav1FreqHz;
+	so.sendTo(stringStream.str().c_str());
+	stringStream.str("");
+
+	// Nav2 Frequency
+	float nav2FreqHz = XPLMGetDatai(XPLMFindDataRef("sim/cockpit/radios/nav2_freq_hz"));
+	stringStream << "Nav2FreqHz=" << nav2FreqHz;
+	so.sendTo(stringStream.str().c_str());
+	stringStream.str("");
+
+	// Game Paused ?
+	int isGamePaused = XPLMGetDatai(XPLMFindDataRef("sim/time/paused"));
+	stringStream << "GamePaused=" << isGamePaused;
+	so.sendTo(stringStream.str().c_str());
+	stringStream.str("");
+
+	// Send Custom Datarefs
+	XPListBoxData_t	*pListBoxData = (XPListBoxData_t*)XPGetWidgetProperty(wDataRefListBox, xpProperty_ListBoxData, NULL);
+	sendDataRefs(pListBoxData, so);
+
+	log("Close Socket");
 	so.~SocketClient();
 }
 
@@ -785,19 +862,12 @@ void XPLaneMapMenuHandler(void * mRef, void * iRef)
 	{
 		if (MenuItem1 == 0)
 		{
+			checkFileConfig();
 			CreateWidgetWindow();
 			MenuItem1 = 1;
 			XPLMRegisterFlightLoopCallback(CallBackXPlane, 1.0, NULL);
 		}
 	}
-}
-
-float CallBackXPlane(float  inElapsedSinceLastCall,
-	float  inElapsedTimeSinceLastFlightLoop,
-	int    inCounter,
-	void * inRefcon)
-{
-	return CHECKINTERVAL;
 }
 
 int widgetWidgetHandler(XPWidgetMessage inMessage,
@@ -825,12 +895,18 @@ int widgetWidgetHandler(XPWidgetMessage inMessage,
 		}
 		if (inParam1 == (intptr_t)wBtnSendInfo)
 		{
-			sendInfo();
+			sendDataRefs();
 			return 1;
 		}
-		if (inParam1 == (intptr_t)wBtnCancel)
+		if (inParam1 == (intptr_t)wBtnSaveExit)
 		{
 			saveFileCfg();
+			XPHideWidget(wMainWindow);
+			MenuItem1 = 0;
+			return 1;
+		}
+		if (inParam1 == (intptr_t)wBtnExit)
+		{
 			XPHideWidget(wMainWindow);
 			MenuItem1 = 0;
 			return 1;
@@ -850,9 +926,16 @@ int widgetWidgetHandler(XPWidgetMessage inMessage,
 			XPSetWidgetProperty(wDataRefListBox, xpProperty_ListBoxDeleteItem, 1);
 			return 1;
 		}
-		
+	}
 
-
+	if (inMessage == xpMsg_ButtonStateChanged)
+	{
+		if (inParam1 == (intptr_t)wChkSendOn)
+		{
+			long isTrue = XPGetWidgetProperty(wChkSendOn, xpProperty_ButtonState, 0);
+			isTrue ? sendOn = 1 : sendOn = 0;
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -860,6 +943,7 @@ int widgetWidgetHandler(XPWidgetMessage inMessage,
 void checkFileConfig() {
 	std::ifstream fileIniReader(fileName.c_str());
 	if (fileIniReader.good()) {
+
 		szListBoxText[0] = '\0';
 
 		std::string line;
@@ -894,6 +978,13 @@ void checkFileConfig() {
 	}
 }
 
+static void listBoxSave(XPListBoxData_t *pListBoxData, std::ofstream &fileIniWriter)
+{
+	for (unsigned int n = 0; n < pListBoxData->Items.size(); ++n)
+	{
+		fileIniWriter << "dataref=" << pListBoxData->Items[n] << "\n";
+	}
+}
 void saveFileCfg()
 {
 	char buffer[256];
@@ -912,13 +1003,58 @@ void saveFileCfg()
 	fileIniWriter << "server=" + server + "\n";
 	fileIniWriter << "port=" + port + "\n";
 
-	char temp[4096];
-	strncpy(temp, szListBoxText, sizeof(temp));
-	char* itens = strtok(temp, ";");
-	while (itens) {
-		fileIniWriter << "dataref=" << itens << "\n";
-		itens = strtok(NULL, ";");
-	}
-
+	XPListBoxData_t	*pListBoxData = (XPListBoxData_t*)XPGetWidgetProperty(wDataRefListBox, xpProperty_ListBoxData, NULL);
+	listBoxSave(pListBoxData, fileIniWriter);
+	
 	fileIniWriter.close();
+}
+
+std::string getDescriptionGPSDestinationType(int destinationType)
+{
+	std::string ret;
+	switch (destinationType) {
+	case xplm_Nav_Airport:
+		ret = "Airport";
+		break;
+	case xplm_Nav_NDB:
+		ret = "NBD";
+		break;
+	case xplm_Nav_VOR:
+		ret = "VOR";
+		break;
+	case xplm_Nav_ILS:
+		ret = "ILS";
+		break;
+	case xplm_Nav_Localizer:
+		ret = "Localizer";
+		break;
+	case xplm_Nav_GlideSlope:
+		ret = "Glideslope";
+		break;
+	case xplm_Nav_OuterMarker:
+		ret = "OuterMarker";
+		break;
+	case xplm_Nav_MiddleMarker:
+		ret = "MiddleMarker";
+		break;
+	case xplm_Nav_InnerMarker:
+		ret = "InnerMarker";
+		break;
+	case xplm_Nav_Fix:
+		ret = "FIX";
+		break;
+	case xplm_Nav_DME:
+		ret = "DME";
+		break;
+	case xplm_Nav_LatLon:
+		ret = "Lat./Long.";
+		break;
+	case 28:
+		ret = "FMS";
+		break;
+	default:
+		ret = "Not Found";
+		break;
+	}
+	return ret;
 }

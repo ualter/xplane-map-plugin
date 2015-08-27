@@ -28,7 +28,7 @@ SocketClient::SocketClient(const char *serverAddress, int port) {
 	si_other.sin_addr.S_un.S_addr = inet_addr(address.c_str());
 }
 
-int SocketClient::sendTo(char *message) {
+int SocketClient::sendTo(const char *message) {
 	int ret = sendto(sock, message, strlen(message), 0, (struct sockaddr *) &si_other, slen);
 	if (ret < 0) {
 		printf("Failed Sending:" + WSAGetLastError());

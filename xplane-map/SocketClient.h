@@ -10,7 +10,7 @@ using namespace std;
 class SocketClient
 {
 public:
-	int sendTo(char *message);
+	int sendTo(const char *message);
 	SocketClient(const char *serverAddress, int port);
 	~SocketClient();
 
