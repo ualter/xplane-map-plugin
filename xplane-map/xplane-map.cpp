@@ -797,17 +797,18 @@ float CallBackXPlane(float  inElapsedSinceLastCall,
 	}
 	return CHECKINTERVAL;
 }
-static void sendDataRefs(XPListBoxData_t *pListBoxData, SocketClient &socket)
+const char sep = ';';
+static void sendDataRefs(XPListBoxData_t *pListBoxData, std::ostringstream &stringStream)
 {
 	for (unsigned int n = 0; n < pListBoxData->Items.size(); ++n)
 	{
 		std::string dataref = pListBoxData->Items[n];
-		log("sending..." + dataref);
-		socket.sendTo(dataref.c_str());
+		stringStream << dataref.c_str() << "=" << "valor" << sep;
 	}
 }
 void sendDataRefs()
 {
+	
 	char label[256];
 	log("Opening Socket with " + server + ":" + port);
 	SocketClient so = SocketClient(server.c_str(), convertToNumber(port));
@@ -823,34 +824,27 @@ void sendDataRefs()
 	XPLMGetNavAidInfo(gpsDestination, &gpsDestinationType, NULL, NULL, NULL, &outFrequency, NULL, outID, outName, NULL);
 	if (strcmp(outID, "----") != 0)  {
 		std::string descripDestTypeGPS = getDescriptionGPSDestinationType(gpsDestinationType);
-		stringStream << "GpsDestination=" << descripDestTypeGPS << "-" << outName << "-" << outID;
-		so.sendTo(stringStream.str().c_str());
-	} else {
-		so.sendTo("GpsDestination=FMS");
+		stringStream << "GpsDestination=" << descripDestTypeGPS << "-" << outName << "-" << outID << sep;
 	}
-	stringStream.str("");
 
 	// Nav1 Frequency
 	float nav1FreqHz = XPLMGetDatai(XPLMFindDataRef("sim/cockpit/radios/nav1_freq_hz"));
-	stringStream << "Nav1FreqHz=" << nav1FreqHz;
-	so.sendTo(stringStream.str().c_str());
-	stringStream.str("");
-
+	stringStream << "Nav1FreqHz=" << nav1FreqHz << sep;
+	
 	// Nav2 Frequency
 	float nav2FreqHz = XPLMGetDatai(XPLMFindDataRef("sim/cockpit/radios/nav2_freq_hz"));
-	stringStream << "Nav2FreqHz=" << nav2FreqHz;
-	so.sendTo(stringStream.str().c_str());
-	stringStream.str("");
+	stringStream << "Nav2FreqHz=" << nav2FreqHz << sep;
 
 	// Game Paused ?
 	int isGamePaused = XPLMGetDatai(XPLMFindDataRef("sim/time/paused"));
-	stringStream << "GamePaused=" << isGamePaused;
-	so.sendTo(stringStream.str().c_str());
-	stringStream.str("");
+	stringStream << "GamePaused=" << isGamePaused << sep;
 
 	// Send Custom Datarefs
 	XPListBoxData_t	*pListBoxData = (XPListBoxData_t*)XPGetWidgetProperty(wDataRefListBox, xpProperty_ListBoxData, NULL);
-	sendDataRefs(pListBoxData, so);
+	sendDataRefs(pListBoxData, stringStream);
+
+	so.sendTo(stringStream.str().c_str());
+	stringStream.str(std::string());
 
 	log("Close Socket");
 	so.~SocketClient();
