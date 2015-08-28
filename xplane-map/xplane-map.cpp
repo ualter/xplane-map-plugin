@@ -817,14 +817,20 @@ void sendDataRefs()
 	// GPS Infos
 	XPLMNavRef gpsDestination = XPLMGetGPSDestination();
 	XPLMNavType gpsDestinationType = XPLMGetGPSDestinationType();
+
+	log(gpsDestination);
+	log(gpsDestinationType);
+
+
 	std::ostringstream stringStream;
 	int outFrequency;
 	char outID[10];
 	char outName[256];
 	XPLMGetNavAidInfo(gpsDestination, &gpsDestinationType, NULL, NULL, NULL, &outFrequency, NULL, outID, outName, NULL);
 	if (strcmp(outID, "----") != 0)  {
+		
 		std::string descripDestTypeGPS = getDescriptionGPSDestinationType(gpsDestinationType);
-		stringStream << "GpsDestination=" << descripDestTypeGPS << "-" << outName << "-" << outID << sep;
+		stringStream << "GpsDestination=" << descripDestTypeGPS.c_str() << "-" << outName << "-" << outID << sep;
 	}
 
 	// Nav1 Frequency
