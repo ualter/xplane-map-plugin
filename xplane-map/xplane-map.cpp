@@ -808,30 +808,24 @@ static void sendDataRefs(XPListBoxData_t *pListBoxData, std::ostringstream &stri
 }
 void sendDataRefs()
 {
-	
+	std::ostringstream stringStream;
 	char label[256];
 	log("Opening Socket with " + server + ":" + port);
 	SocketClient so = SocketClient(server.c_str(), convertToNumber(port));
 
-	// Send Datarefs expected by the XPlane Map
-	// GPS Infos
+	// FMS / GPS Destination
+	int outFrequency; char outID[10]; char outName[256];
 	XPLMNavRef gpsDestination = XPLMGetGPSDestination();
 	XPLMNavType gpsDestinationType = XPLMGetGPSDestinationType();
-
-	log(gpsDestination);
-	log(gpsDestinationType);
-
-
-	std::ostringstream stringStream;
-	int outFrequency;
-	char outID[10];
-	char outName[256];
-	XPLMGetNavAidInfo(gpsDestination, &gpsDestinationType, NULL, NULL, NULL, &outFrequency, NULL, outID, outName, NULL);
-	if (strcmp(outID, "----") != 0)  {
-		
-		std::string descripDestTypeGPS = getDescriptionGPSDestinationType(gpsDestinationType);
-		stringStream << "GpsDestination=" << descripDestTypeGPS.c_str() << "-" << outName << "-" << outID << sep;
-	}
+	// Get FMS Destination Info Id String (Ex: KSEA)
+	XPLMGetFMSEntryInfo(XPLMGetDestinationFMSEntry(), &gpsDestinationType, outID, &gpsDestination, NULL, NULL, NULL);
+	// Get NavAid Destination
+	XPLMNavRef navRefDestination = XPLMFindNavAid(NULL, outID, NULL, NULL, NULL, gpsDestinationType);
+	// Get NavAid Destination Type Description
+	std::string descripDestTypeGPS = getDescriptionGPSDestinationType(gpsDestinationType);
+	// Get NavAid Information
+	XPLMGetNavAidInfo(navRefDestination, &gpsDestinationType, NULL, NULL, NULL, &outFrequency, NULL, outID, outName, NULL);
+	stringStream << "Destination=" << descripDestTypeGPS.c_str() << "-" << outID << "-" << outName << sep;
 
 	// Nav1 Frequency
 	float nav1FreqHz = XPLMGetDatai(XPLMFindDataRef("sim/cockpit/radios/nav1_freq_hz"));
@@ -1011,6 +1005,11 @@ void saveFileCfg()
 
 std::string getDescriptionGPSDestinationType(int destinationType)
 {
+	std:ostringstream ss;
+	ss << "received gpsDestinationType=" << destinationType;
+	log(ss.str().c_str());
+	ss.str("");
+
 	std::string ret;
 	switch (destinationType) {
 	case xplm_Nav_Airport:
@@ -1056,5 +1055,6 @@ std::string getDescriptionGPSDestinationType(int destinationType)
 		ret = "Not Found";
 		break;
 	}
+	log(ret.c_str());
 	return ret;
 }
