@@ -186,6 +186,7 @@ static int widgetWidgetHandler(
 	intptr_t				inParam2);
 
 std::string getDescriptionGPSDestinationType(int destinationType);
+void startXPlaneMapPlugin();
 
 static void XPLaneMapMenuHandler(void *, void *);
 void checkFileConfig();
@@ -207,8 +208,13 @@ PLUGIN_API int XPluginStart(
 	id = XPLMCreateMenu("XPlane Map", XPLMFindPluginsMenu(), item, XPLaneMapMenuHandler, NULL);
 	XPLMAppendMenuItem(id, "Setup", (void *)"Setup", 1);
 
-	checkFileConfig();
-	MenuItem1 = 0;
+	// Start Normal (By Menu)
+	//checkFileConfig();
+	//MenuItem1 = 0;
+	// ou
+	// Start Imediattelly
+	startXPlaneMapPlugin();
+
 	return 1;
 }
 
@@ -797,15 +803,63 @@ float CallBackXPlane(float  inElapsedSinceLastCall,
 	}
 	return CHECKINTERVAL;
 }
+
 const char sep = ';';
-static void sendDataRefs(XPListBoxData_t *pListBoxData, std::ostringstream &stringStream)
-{
+static void sendDataRefs(XPListBoxData_t *pListBoxData, std::ostringstream &stringStream) {
+	const char DELIMITER = '@';
+	std::string dataref = "";
+	std::string typedata = "";
+	std::string address   = "";
+	unsigned long start, end = 0;
+
 	for (unsigned int n = 0; n < pListBoxData->Items.size(); ++n)
 	{
-		std::string dataref = pListBoxData->Items[n];
-		stringStream << dataref.c_str() << "=" << "valor" << sep;
+		std::string line = pListBoxData->Items[n];
+
+		//dataref
+		start = 0;
+		end = line.find("@");
+		dataref = line.substr(start, end);
+		log(dataref);
+
+		// address
+		start = line.find("@", dataref.length());
+		end = line.substr(start + 1).find("@", dataref.length() + 1);
+		address = line.substr(start + 1, end);
+		log(address);
+
+		// typedata
+		start = line.find("@", address.length());
+		end = line.substr(start + 1).find("@", address.length() + 1);
+		typedata = line.substr(start + 1, end);
+		log(typedata);
+
+		if ( typedata.compare("I") == 0 ) {
+			// Integer
+			int vlr = XPLMGetDatai(XPLMFindDataRef(address.c_str()));
+			log("aqui integer");
+			log(vlr);
+			stringStream << dataref << "=" << vlr << sep;
+		} else 
+		if ( typedata.compare("F") == 0 ) {
+			// Float
+			//float nav2FreqHz = XPLMGetDatai(XPLMFindDataRef("sim/cockpit/radios/nav2_freq_hz"));
+			float vlr = XPLMGetDataf(XPLMFindDataRef(address.c_str()));
+			log("aqui float");
+			log(vlr);
+			stringStream << dataref << "=" << vlr << sep;
+		}
 	}
 }
+/*
+ Default Configuration for DataRefs:
+
+ dataref=nav1FreqHz@sim/cockpit/radios/nav1_freq_hz@I
+ dataref=nav2FreqHz@sim/cockpit/radios/nav2_freq_hz@I
+ dataref=altitude@sim/cockpit2/gauges/indicators/altitude_ft_pilot@F
+ dataref=airspeed@sim/cockpit2/gauges/indicators/airspeed_kts_pilot@F
+
+*/
 void sendDataRefs()
 {
 	std::ostringstream stringStream;
@@ -825,19 +879,29 @@ void sendDataRefs()
 	std::string descripDestTypeGPS = getDescriptionGPSDestinationType(gpsDestinationType);
 	// Get NavAid Information
 	XPLMGetNavAidInfo(navRefDestination, &gpsDestinationType, NULL, NULL, NULL, &outFrequency, NULL, outID, outName, NULL);
-	stringStream << "Destination=" << descripDestTypeGPS.c_str() << "-" << outID << "-" << outName << sep;
+	stringStream << "destination=" << outID << "-" << outName << " (" << descripDestTypeGPS.c_str() << ")" << sep;
 
 	// Nav1 Frequency
-	float nav1FreqHz = XPLMGetDatai(XPLMFindDataRef("sim/cockpit/radios/nav1_freq_hz"));
-	stringStream << "Nav1FreqHz=" << nav1FreqHz << sep;
+	//float nav1FreqHz = XPLMGetDatai(XPLMFindDataRef("sim/cockpit/radios/nav1_freq_hz"));
+	//stringStream << "nav1FreqHz=" << nav1FreqHz << sep;
 	
 	// Nav2 Frequency
-	float nav2FreqHz = XPLMGetDatai(XPLMFindDataRef("sim/cockpit/radios/nav2_freq_hz"));
-	stringStream << "Nav2FreqHz=" << nav2FreqHz << sep;
+	//float nav2FreqHz = XPLMGetDatai(XPLMFindDataRef("sim/cockpit/radios/nav2_freq_hz"));
+	//stringStream << "nav2FreqHz=" << nav2FreqHz << sep;
 
-	// Game Paused ?
+	// Game Paused
 	int isGamePaused = XPLMGetDatai(XPLMFindDataRef("sim/time/paused"));
-	stringStream << "GamePaused=" << isGamePaused << sep;
+	stringStream << "gamePaused=" << isGamePaused << sep;
+
+	// Barometer Setting				
+	float barometer = XPLMGetDataf(XPLMFindDataRef("sim/cockpit/misc/barometer_setting"));
+	stringStream << "barometer=" << barometer << sep;
+
+	// Compass Heading
+	float compasss = XPLMGetDataf(XPLMFindDataRef("sim/cockpit2/gauges/indicators/compass_heading_deg_mag"));
+	stringStream << "compassHeading=" << compasss << sep;
+
+	//sim/cockpit2/gauges/indicators/altitude_ft_pilot
 
 	// Send Custom Datarefs
 	XPListBoxData_t	*pListBoxData = (XPListBoxData_t*)XPGetWidgetProperty(wDataRefListBox, xpProperty_ListBoxData, NULL);
@@ -856,10 +920,7 @@ void XPLaneMapMenuHandler(void * mRef, void * iRef)
 	{
 		if (MenuItem1 == 0)
 		{
-			checkFileConfig();
-			CreateWidgetWindow();
-			MenuItem1 = 1;
-			XPLMRegisterFlightLoopCallback(CallBackXPlane, 1.0, NULL);
+			startXPlaneMapPlugin();
 		}
 	}
 }
@@ -1057,4 +1118,11 @@ std::string getDescriptionGPSDestinationType(int destinationType)
 	}
 	log(ret.c_str());
 	return ret;
+}
+
+void startXPlaneMapPlugin() {
+	checkFileConfig();
+	CreateWidgetWindow();
+	MenuItem1 = 1;
+	XPLMRegisterFlightLoopCallback(CallBackXPlane, 1.0, NULL);
 }
