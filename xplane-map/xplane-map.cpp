@@ -837,17 +837,19 @@ static void sendDataRefs(XPListBoxData_t *pListBoxData, std::ostringstream &stri
 		if ( typedata.compare("I") == 0 ) {
 			// Integer
 			int vlr = XPLMGetDatai(XPLMFindDataRef(address.c_str()));
-			log("aqui integer");
-			log(vlr);
 			stringStream << dataref << "=" << vlr << sep;
 		} else 
 		if ( typedata.compare("F") == 0 ) {
 			// Float
-			//float nav2FreqHz = XPLMGetDatai(XPLMFindDataRef("sim/cockpit/radios/nav2_freq_hz"));
 			float vlr = XPLMGetDataf(XPLMFindDataRef(address.c_str()));
-			log("aqui float");
-			log(vlr);
 			stringStream << dataref << "=" << vlr << sep;
+		}
+		else
+		if (typedata.compare("B") == 0) {
+			// Byte Array
+			float vlr[9] = {};
+			XPLMGetDatavf(XPLMFindDataRef(address.c_str()),vlr,1,1);
+			stringStream << dataref << "=" << vlr[0] << sep;
 		}
 	}
 }
@@ -858,6 +860,19 @@ static void sendDataRefs(XPListBoxData_t *pListBoxData, std::ostringstream &stri
  dataref=nav2FreqHz@sim/cockpit/radios/nav2_freq_hz@I
  dataref=altitude@sim/cockpit2/gauges/indicators/altitude_ft_pilot@F
  dataref=airspeed@sim/cockpit2/gauges/indicators/airspeed_kts_pilot@F
+ dataref=fuelquantity@sim/cockpit2/fuel/fuel_quantity@B
+ dataref=apurunning@sim/cockpit2/electrical/APU_running@I
+ dataref=com1FreqHz@sim/cockpit/radios/com1_freq_hz@I
+ dataref=com2FreqHz@sim/cockpit/radios/com2_freq_hz@I
+ dataref=com1FreqHzStdby@sim/cockpit/radios/com1_stdby_freq_hz@I
+ dataref=com2FreqHzStdby@sim/cockpit/radios/com2_stdby_freq_hz@I
+ dataref=gpsDMEDistM@sim/cockpit/radios/gps_dme_dist_m@F
+ dataref=gpsDMETimeSecs@sim/cockpit/radios/gps_dme_time_secs@F
+ dataref=nav1DMEDistNm@sim/cockpit2/radios/indicators/nav1_dme_distance_nm@F
+ dataref=nav1DMEDistMin@sim/cockpit2/radios/indicators/nav1_dme_time_min@F
+ dataref=nav2DMEDistNm@sim/cockpit2/radios/indicators/nav2_dme_distance_nm@F
+ dataref=nav2DMEDistMin@sim/cockpit2/radios/indicators/nav2_dme_time_min@F
+ dataref=outsideTempC@sim/cockpit2/temperature/outside_air_temp_degc@F
 
 */
 void sendDataRefs()
