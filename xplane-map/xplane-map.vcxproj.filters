@@ -33,4 +33,7 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\..\..\..\X-Plane 10\xplane-map.cfg" />
+  </ItemGroup>
 </Project>

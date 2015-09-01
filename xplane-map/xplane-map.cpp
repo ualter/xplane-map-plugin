@@ -873,7 +873,17 @@ static void sendDataRefs(XPListBoxData_t *pListBoxData, std::ostringstream &stri
  dataref=nav2DMEDistNm@sim/cockpit2/radios/indicators/nav2_dme_distance_nm@F
  dataref=nav2DMEDistMin@sim/cockpit2/radios/indicators/nav2_dme_time_min@F
  dataref=outsideTempC@sim/cockpit2/temperature/outside_air_temp_degc@F
-
+ dataref=vsFpm@sim/cockpit2/gauges/indicators/vvi_fpm_pilot@F
+ dataref=groundspeed@sim/flightmodel/position/groundspeed@F
+ dataref=true_airspeed@sim/flightmodel/position/true_airspeed@F
+ dataref=latitude@sim/flightmodel/position/latitude@F
+ dataref=longitude@sim/flightmodel/position/longitude@F
+ dataref=weightTotalFuel@sim/aircraft/weight/acf_m_fuel_tot@F
+ dataref=autopilotMode@sim/cockpit/autopilot/autopilot_mode@I
+ dataref=autopilotAltitude@sim/cockpit/autopilot/altitude@F
+ dataref=autopilotVS@sim/cockpit/autopilot/vertical_velocity@F
+ dataref=autopilotAirSpeed@sim/cockpit/autopilot/airspeed@F
+ dataref=autopilotHeading@sim/cockpit/autopilot/heading@F
 */
 void sendDataRefs()
 {

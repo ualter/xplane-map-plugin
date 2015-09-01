@@ -171,6 +171,9 @@
   <ItemGroup>
     <ClInclude Include="SocketClient.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\..\..\..\X-Plane 10\xplane-map.cfg" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
