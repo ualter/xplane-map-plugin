@@ -11,13 +11,14 @@ class SocketClient
 {
 public:
 	int sendTo(const char *message);
-	SocketClient(const char *serverAddress, int port);
+	int initSocketClient(const char *serverAddress, int port);
+	SocketClient();
 	~SocketClient();
-
 private:
 	WSAData data;
 	SOCKET sock;
 	struct sockaddr_in si_other;
-	std::string address;
+	//std::string address;
+	//int port;
 	int slen = sizeof(si_other);
 };

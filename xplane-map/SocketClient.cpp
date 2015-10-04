@@ -4,10 +4,12 @@
 
 using namespace std;
 
-SocketClient::SocketClient(const char *serverAddress, int port) {
-
-	address = serverAddress;
-	
+SocketClient::SocketClient() {
+}
+int SocketClient::initSocketClient(const char *serverAddress, int portNumber) {
+	//address = serverAddress;
+	//port = portNumber;
+					  	
 	// Initialize Socket
 	int ret = WSAStartup(MAKEWORD(2, 2), &data);
 	if (ret != 0) {
@@ -24,8 +26,10 @@ SocketClient::SocketClient(const char *serverAddress, int port) {
 	// Setting connection
 	memset((char *)&si_other, 0, sizeof(si_other));
 	si_other.sin_family = AF_INET;
-	si_other.sin_port = htons(port);
-	si_other.sin_addr.S_un.S_addr = inet_addr(address.c_str());
+	si_other.sin_port = htons(portNumber);
+	si_other.sin_addr.S_un.S_addr = inet_addr(serverAddress);
+
+	return 1;
 }
 
 int SocketClient::sendTo(const char *message) {

@@ -24,8 +24,7 @@
 #include <vector>
 #include <windows.h>
 #include <GL/gl.h>
-
-
+												   
 #pragma comment(lib, "OpenGL32.lib")
 
 
@@ -185,6 +184,9 @@ static int widgetWidgetHandler(
 	intptr_t				inParam1,
 	intptr_t				inParam2);
 
+long convertToNumber(std::string str);
+
+static SocketClient socketClient;
 std::string getDescriptionGPSDestinationType(int destinationType);
 void startXPlaneMapPlugin();
 
@@ -209,11 +211,13 @@ PLUGIN_API int XPluginStart(
 	XPLMAppendMenuItem(id, "Setup", (void *)"Setup", 1);
 
 	// Start Normal (By Menu)
-	//checkFileConfig();
-	//MenuItem1 = 0;
+	checkFileConfig();
+	MenuItem1 = 0;
+	socketClient.initSocketClient(server.c_str(), convertToNumber(port));
 	// ou
 	// Start Imediattelly
-	startXPlaneMapPlugin();
+	//startXPlaneMapPlugin();
+	//socket
 
 	return 1;
 }
@@ -798,8 +802,16 @@ float CallBackXPlane(float  inElapsedSinceLastCall,
 	int    inCounter,
 	void * inRefcon)
 {
-	if (sendOn) {
-		sendDataRefs();
+	try {
+		if (sendOn) {
+			sendDataRefs();
+		}
+	}
+	catch (...) {
+		// This is a caution in order do not stop the game in case of a exception thrown (fun must continues), crash ignored for now, just log if possible
+		try {
+			log("ERROR, ERROR!! - Catch thrown");
+		}catch(...) {}
 	}
 	return CHECKINTERVAL;
 }
@@ -820,19 +832,16 @@ static void sendDataRefs(XPListBoxData_t *pListBoxData, std::ostringstream &stri
 		start = 0;
 		end = line.find("@");
 		dataref = line.substr(start, end);
-		log(dataref);
 
 		// address
 		start = line.find("@", dataref.length());
 		end = line.substr(start + 1).find("@", dataref.length() + 1);
 		address = line.substr(start + 1, end);
-		log(address);
 
 		// typedata
 		start = line.find("@", address.length());
 		end = line.substr(start + 1).find("@", address.length() + 1);
 		typedata = line.substr(start + 1, end);
-		log(typedata);
 
 		if ( typedata.compare("I") == 0 ) {
 			// Integer
@@ -889,8 +898,6 @@ void sendDataRefs()
 {
 	std::ostringstream stringStream;
 	char label[256];
-	log("Opening Socket with " + server + ":" + port);
-	SocketClient so = SocketClient(server.c_str(), convertToNumber(port));
 
 	// FMS / GPS Destination
 	int outFrequency; char outID[10]; char outName[256];
@@ -932,11 +939,8 @@ void sendDataRefs()
 	XPListBoxData_t	*pListBoxData = (XPListBoxData_t*)XPGetWidgetProperty(wDataRefListBox, xpProperty_ListBoxData, NULL);
 	sendDataRefs(pListBoxData, stringStream);
 
-	so.sendTo(stringStream.str().c_str());
+	socketClient.sendTo(stringStream.str().c_str());
 	stringStream.str(std::string());
-
-	log("Close Socket");
-	so.~SocketClient();
 }
 
 void XPLaneMapMenuHandler(void * mRef, void * iRef)
@@ -1093,7 +1097,6 @@ std::string getDescriptionGPSDestinationType(int destinationType)
 {
 	std:ostringstream ss;
 	ss << "received gpsDestinationType=" << destinationType;
-	log(ss.str().c_str());
 	ss.str("");
 
 	std::string ret;
@@ -1141,7 +1144,6 @@ std::string getDescriptionGPSDestinationType(int destinationType)
 		ret = "Not Found";
 		break;
 	}
-	log(ret.c_str());
 	return ret;
 }
 
