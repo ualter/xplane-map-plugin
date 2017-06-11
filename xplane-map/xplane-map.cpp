@@ -1,3 +1,5 @@
+#define XPLM200 = 1;  // This example requires SDK2.0
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <algorithm>
@@ -5,6 +7,7 @@
 #include <sstream>
 #include <iomanip>
 #include <fstream>
+#include "XPLMPlugin.h"
 #include "XPLMDisplay.h"
 #include "XPLMGraphics.h"
 #include "XPLMProcessing.h"
@@ -13,10 +16,10 @@
 #include "XPLMUtilities.h"
 #include "XPWidgets.h"
 #include "XPStandardWidgets.h"
+#include "XPLMScenery.h"
 #include "XPLMCamera.h"
 #include "XPUIGraphics.h"
 #include "XPWidgetUtils.h"
-#include "XPLMPlugin.h"
 #include "XPLMNavigation.h"
 #include "XPLMDataAccess.h"
 #include "SocketClient.h"
@@ -26,7 +29,6 @@
 #include <GL/gl.h>
 												   
 #pragma comment(lib, "OpenGL32.lib")
-
 
 #ifdef __cplusplus
 #  if !defined(__MINGW32__) && !defined(_MSC_VER)
@@ -196,6 +198,15 @@ void saveFileCfg();
 void sendDataRefs();
 int sendOn = 0;
 
+XPLMCommandRef SetupCommand = NULL;
+XPLMCommandRef SendCommand = NULL;
+XPLMCommandRef ReloadPluginCommand = NULL;
+
+int SetupCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon);
+int SendCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon);
+int ReloadPluginCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon);
+
+
 PLUGIN_API int XPluginStart(
 	char *		outName,
 	char *		outSig,
@@ -204,6 +215,15 @@ PLUGIN_API int XPluginStart(
 	strcpy(outName, "XPlane-Map");
 	strcpy(outSig, "br.sp.ualter.junior.XPlaneMap");
 	strcpy(outDesc, "Plugin X-Plane");
+
+	// Create our commands; these will increment and decrement our custom dataref.
+	SetupCommand        = XPLMCreateCommand("Ualter/xplane-map/Setup", "Open Setup window");
+	SendCommand         = XPLMCreateCommand("Ualter/xplane-map/SendData", "On/Off Send Option");
+	ReloadPluginCommand = XPLMCreateCommand("Ualter/xplane-map/ReloadPlugin", "Reload Plugins");
+	// Register our custom commands
+	XPLMRegisterCommandHandler(SetupCommand, SetupCommandHandler, 1, (void *)0);
+	XPLMRegisterCommandHandler(SendCommand, SendCommandHandler, 1, (void *)0);
+	XPLMRegisterCommandHandler(ReloadPluginCommand, ReloadPluginCommandHandler, 1, (void *)0);
 
 	int item;
 	item = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "XPlane Map", NULL, 1);
@@ -221,31 +241,56 @@ PLUGIN_API int XPluginStart(
 
 	return 1;
 }
+			   
+int SetupCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon)
+{
+	if (MenuItem1 == 0)
+	{
+		startXPlaneMapPlugin();
+	}
+	return 0;
+}
+
+int SendCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon)
+{
+	long isTrue = sendOn;
+	isTrue ? sendOn = 0 : sendOn = 1;
+	return 0;
+}
+
+int ReloadPluginCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon)
+{
+	XPLMReloadPlugins();
+	return 0;
+}
+			  
 
 void CreateWidgetWindow() 
 {
+	int startY = 850;
+
 	int x = 100;
-	int y = 1050;
+	int y = startY;
 	int w = 577;
 	int h = 390;
 
 	int x2 = x + w;
 	int y2 = y - h;
 
-	wMainWindow = XPCreateWidget(x, y, x2, y2, 1, "XPlane Map / v1.0", 1, NULL, xpWidgetClass_MainWindow);
+	wMainWindow = XPCreateWidget(x, y, x2, y2, 1, "XPlane Map / v1.2", 1, NULL, xpWidgetClass_MainWindow);
 	XPSetWidgetProperty(wMainWindow, xpProperty_MainWindowHasCloseBoxes, 1);
 
 	// Window
 	wSubWindow = XPCreateWidget(x + 30, y - 40, x2 - 30, y2 + 30, 1, "", 0, wMainWindow, xpWidgetClass_SubWindow);
 	XPSetWidgetProperty(wSubWindow, xpProperty_SubWindowType, xpSubWindowStyle_SubWindow);
 
-	int lineY = 1030;
+	int lineY = (startY - 20);
 	int lineX = 150;
 	int size = 80;
 
 	// Server Address
 	XPCreateWidget(lineX, lineY - 39, lineX + size, lineY - 59, 1, "Server Address:", 0, wMainWindow, xpWidgetClass_Caption);
-	lineX += 88;
+	lineX += 100;
 	wTextServerAddress = XPCreateWidget(lineX, lineY - 40, lineX + 100, lineY - 60, 1, server.c_str(), 0, wMainWindow, xpWidgetClass_TextField);
 	XPSetWidgetProperty(wTextServerAddress, xpProperty_TextFieldType, xpTextEntryField);
 	XPSetWidgetProperty(wTextServerAddress, xpProperty_MaxCharacters, 15);
@@ -263,25 +308,25 @@ void CreateWidgetWindow()
 	XPSetWidgetProperty(wChkSendOn, xpProperty_ButtonBehavior, xpButtonBehaviorCheckBox);
 	XPSetWidgetProperty(wChkSendOn, xpProperty_ButtonState, sendOn);
 	lineX += 40;
-	XPCreateWidget(lineX, lineY - 39, lineX + size, lineY - 59, 1, "Send DataRef", 0, wMainWindow, xpWidgetClass_Caption);
+	XPCreateWidget(lineX - 8, lineY - 39, lineX + size - 8, lineY - 59, 1, "ON", 0, wMainWindow, xpWidgetClass_Caption);
 
 	// DataRefs
-	lineY = 1010;
+	lineY = (startY - 40);
 	lineX = 150;
 	XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 62, 1, "DataRefs:", 0, wMainWindow, xpWidgetClass_Caption);
-	lineY = 995;
+	lineY = (startY - 55);
 	wTextDataRefItem = XPCreateWidget(lineX + 2, lineY - 40, lineX + 368, lineY - 60, 1, "", 0, wMainWindow, xpWidgetClass_TextField);
 	XPSetWidgetProperty(wTextDataRefItem, xpProperty_TextFieldType, xpTextEntryField);
 	XPSetWidgetProperty(wTextDataRefItem, xpProperty_MaxCharacters, 100);
 	lineX =+ 525;
 	wBtnAddDataRef = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Add DataRef", 0, wMainWindow, xpWidgetClass_Button);
 	XPSetWidgetProperty(wBtnAddDataRef, xpProperty_ButtonType, xpPushButton);
-	lineY = 972;
+	lineY = (startY - 78);
 	lineX = 150;
 	wDataRefListBox = XPCreateListBox(lineX + 2, lineY - 40, lineX + 480, lineY - 240, 1, szListBoxText, wMainWindow);
 	
 	// Buttons
-	lineY = 760;
+	lineY = (startY - 290);
 	lineX = 180;
 
 	// Button Send
@@ -304,10 +349,13 @@ void CreateWidgetWindow()
 	XPSetWidgetProperty(wBtnExit, xpProperty_ButtonType, xpPushButton);
 
 	// Button Reload
-	lineY = 730;
-	lineX = 330;
-	wBtnReload = XPCreateWidget(lineX, lineY - 40, lineX + size, lineY - 60, 1, "Reload", 0, wMainWindow, xpWidgetClass_Button);
-	XPSetWidgetProperty(wBtnReload, xpProperty_ButtonType, xpPushButton); 
+	lineY = (startY - 325);
+	lineX = 130;
+	wBtnReload = XPCreateWidget(lineX, lineY - 40, lineX + size + 10, lineY - 60, 1, "Reload Plugins", 0, wMainWindow, xpWidgetClass_Button);
+	XPSetWidgetProperty(wBtnReload, xpProperty_ButtonType, xpPushButton);
+
+	XPWidgetID email = XPCreateWidget(lineX + 180, lineY - 38, lineX + 200, lineY - 58, 1, "ualter.junior@gmail.com", 0, wMainWindow, xpWidgetClass_Caption);
+	XPSetWidgetProperty(email, xpProperty_CaptionLit, 0);
 
 	XPAddWidgetCallback(wMainWindow, widgetWidgetHandler);
 }
@@ -1152,4 +1200,10 @@ void startXPlaneMapPlugin() {
 	CreateWidgetWindow();
 	MenuItem1 = 1;
 	XPLMRegisterFlightLoopCallback(CallBackXPlane, 1.0, NULL);
+}
+
+PLUGIN_API void XPluginStop(void)
+{
+	XPLMUnregisterCommandHandler(SetupCommand, SetupCommandHandler, 0, 0);
+	XPLMUnregisterCommandHandler(SendCommand, SendCommandHandler, 0, 0);
 }

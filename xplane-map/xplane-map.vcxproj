@@ -83,7 +83,7 @@
     <TargetName>win</TargetName>
     <TargetExt>.xpl</TargetExt>
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>c:\X-Plane 10\Resources\plugins\xplane-map\64\</OutDir>
+    <OutDir>c:\X-Plane 11\Resources\plugins\xplane-map\64\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
