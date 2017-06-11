@@ -198,12 +198,16 @@ void saveFileCfg();
 void sendDataRefs();
 int sendOn = 0;
 
-XPLMCommandRef SetupCommand = NULL;
-XPLMCommandRef SendCommand = NULL;
+XPLMCommandRef SetupOnCommand = NULL;
+XPLMCommandRef SetupOffCommand = NULL;
+XPLMCommandRef SendOnCommand = NULL;
+XPLMCommandRef SendOffCommand = NULL;
 XPLMCommandRef ReloadPluginCommand = NULL;
 
-int SetupCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon);
-int SendCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon);
+int SetupOnCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon);
+int SetupOffCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon);
+int SendOnCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon);
+int SendOffCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon);
 int ReloadPluginCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon);
 
 
@@ -217,12 +221,16 @@ PLUGIN_API int XPluginStart(
 	strcpy(outDesc, "Plugin X-Plane");
 
 	// Create our commands; these will increment and decrement our custom dataref.
-	SetupCommand        = XPLMCreateCommand("Ualter/xplane-map/Setup", "Open Setup window");
-	SendCommand         = XPLMCreateCommand("Ualter/xplane-map/SendData", "On/Off Send Option");
+	SetupOnCommand      = XPLMCreateCommand("Ualter/xplane-map/SetupOn", "Open Setup window");
+	SetupOffCommand     = XPLMCreateCommand("Ualter/xplane-map/SetupOff", "Close Setup window");
+	SendOnCommand       = XPLMCreateCommand("Ualter/xplane-map/SendDataOn", "Send Data On");
+	SendOffCommand      = XPLMCreateCommand("Ualter/xplane-map/SendDataOff", "Send Data Off");
 	ReloadPluginCommand = XPLMCreateCommand("Ualter/xplane-map/ReloadPlugin", "Reload Plugins");
 	// Register our custom commands
-	XPLMRegisterCommandHandler(SetupCommand, SetupCommandHandler, 1, (void *)0);
-	XPLMRegisterCommandHandler(SendCommand, SendCommandHandler, 1, (void *)0);
+	XPLMRegisterCommandHandler(SetupOnCommand, SetupOnCommandHandler, 1, (void *)0);
+	XPLMRegisterCommandHandler(SetupOffCommand, SetupOffCommandHandler, 1, (void *)0);
+	XPLMRegisterCommandHandler(SendOnCommand, SendOnCommandHandler, 1, (void *)0);
+	XPLMRegisterCommandHandler(SendOffCommand, SendOffCommandHandler, 1, (void *)0);
 	XPLMRegisterCommandHandler(ReloadPluginCommand, ReloadPluginCommandHandler, 1, (void *)0);
 
 	int item;
@@ -242,7 +250,7 @@ PLUGIN_API int XPluginStart(
 	return 1;
 }
 			   
-int SetupCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon)
+int SetupOnCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon)
 {
 	if (MenuItem1 == 0)
 	{
@@ -250,11 +258,26 @@ int SetupCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void
 	}
 	return 0;
 }
-
-int SendCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon)
+int SetupOffCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon)
 {
-	long isTrue = sendOn;
-	isTrue ? sendOn = 0 : sendOn = 1;
+	if (MenuItem1 == 1)
+	{
+		XPHideWidget(wMainWindow);
+		MenuItem1 = 0;
+	}
+	return 0;
+}
+
+int SendOnCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon)
+{
+	sendOn = 1;
+	XPSetWidgetProperty(wChkSendOn, xpProperty_ButtonState, sendOn);
+	return 0;
+}
+int SendOffCommandHandler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void * inRefcon)
+{
+	sendOn = 0;
+	XPSetWidgetProperty(wChkSendOn, xpProperty_ButtonState, sendOn);
 	return 0;
 }
 
@@ -1204,6 +1227,9 @@ void startXPlaneMapPlugin() {
 
 PLUGIN_API void XPluginStop(void)
 {
-	XPLMUnregisterCommandHandler(SetupCommand, SetupCommandHandler, 0, 0);
-	XPLMUnregisterCommandHandler(SendCommand, SendCommandHandler, 0, 0);
+	XPLMUnregisterCommandHandler(SetupOnCommand, SetupOnCommandHandler, 0, 0);
+	XPLMUnregisterCommandHandler(SetupOffCommand, SetupOffCommandHandler, 0, 0);
+	XPLMUnregisterCommandHandler(SendOnCommand, SendOnCommandHandler, 0, 0);
+	XPLMUnregisterCommandHandler(SendOffCommand, SendOffCommandHandler, 0, 0);
+	XPLMUnregisterCommandHandler(ReloadPluginCommand, ReloadPluginCommandHandler, 0, 0);
 }
